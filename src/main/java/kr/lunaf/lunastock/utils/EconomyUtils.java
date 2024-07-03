@@ -1,9 +1,7 @@
 package kr.lunaf.lunastock.utils;
 
 import kr.lunaf.lunastock.LunaStock;
-
 import net.milkbowl.vault.economy.Economy;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -32,16 +30,16 @@ public class EconomyUtils {
         return economy != null;
     }
 
+    public boolean isEconomySetup() {
+        return economySetup;
+    }
+
     public boolean withdraw(Player player, double amount) {
         if (economy.getBalance(player) >= amount) {
             economy.withdrawPlayer(player, amount);
             return true;
         }
         return false;
-    }
-
-    public boolean isEconomySetup() {
-        return economySetup;
     }
 
     public void deposit(Player player, double amount) {

@@ -1,11 +1,10 @@
 package kr.lunaf.lunastock.utils;
 
 import kr.lunaf.lunastock.LunaStock;
-
 import kr.lunaf.lunastock.classes.Stock;
-
+import kr.lunaf.lunastock.events.StockPriceChangeEvent;
 import org.bukkit.configuration.file.FileConfiguration;
-
+import org.bukkit.entity.Player;
 import java.util.*;
 
 public class StockUtils {
@@ -42,11 +41,7 @@ public class StockUtils {
         plugin.saveConfig();
     }
 
-    public Stock getStock(UUID uuid) {
-        return stocks.get(uuid);
-    }
-
-    public Stock getStockByName(String name) {
+    public Stock getStock(String name) {
         for (Stock stock : stocks.values()) {
             if (stock.getName().equalsIgnoreCase(name)) {
                 return stock;
@@ -55,17 +50,41 @@ public class StockUtils {
         return null;
     }
 
+    public Stock getStock(UUID uuid) {
+        return stocks.get(uuid);
+    }
+
+    public Integer getPlayerStock(Player player, Stock stock) {
+        return databaseUtils.getPlayerStock(player.getUniqueId(), stock.getUuid());
+    }
+
+    public List<Stock> getPlayerStockList(Player player) {
+        return databaseUtils.getPlayerStockList(player.getUniqueId());
+    }
+
+    public List<String> getStockHistory(Stock stock, Integer limit) {
+        return databaseUtils.getRecentStockChanges(stock.getUuid(), limit);
+    }
+
+    public List<String> getStockPlayerHistory(Player player, Stock stock, Integer limit) {
+        return databaseUtils.getPlayerStockHistory(player.getUniqueId(), stock.getUuid(), limit);
+    }
+
     public List<Stock> getStocks() {
         return new ArrayList<>(stocks.values());
     }
 
     public void updateStockValue(Stock stock, double change) {
+        double oldValue = stock.getCurrentValue();
         double newValue = stock.getCurrentValue() * (1 + change);
         newValue = Math.max(newValue, 0.01);
         stock.setCurrentValue(newValue);
         stock.setLastChange(change);
         saveStock(stock);
+
         databaseUtils.addStockChange(stock.getUuid(), change);
+
+        plugin.getServer().getPluginManager().callEvent(new StockPriceChangeEvent(stock, oldValue, newValue));
     }
 
     public void saveStock(Stock stock) {

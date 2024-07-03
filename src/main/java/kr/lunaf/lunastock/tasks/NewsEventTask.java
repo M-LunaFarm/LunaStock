@@ -3,10 +3,8 @@ package kr.lunaf.lunastock.tasks;
 import kr.lunaf.lunastock.LunaStock;
 import kr.lunaf.lunastock.classes.Stock;
 import kr.lunaf.lunastock.utils.StockUtils;
-
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
-
 import java.util.List;
 import java.util.Random;
 
@@ -37,7 +35,6 @@ public class NewsEventTask extends BukkitRunnable {
                 stockUtils.updateStockValue(stock, impact);
             }
         }
-
         scheduleNextEvent();
     }
 

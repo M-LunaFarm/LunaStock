@@ -1,33 +1,24 @@
 package kr.lunaf.lunastock.commands;
 
-
+import kr.lunaf.lunastock.API.LunaStockAPI;
 import kr.lunaf.lunastock.LunaStock;
-
 import kr.lunaf.lunastock.classes.Stock;
-
-import kr.lunaf.lunastock.utils.DatabaseUtils;
-import kr.lunaf.lunastock.utils.EconomyUtils;
-import kr.lunaf.lunastock.utils.StockUtils;
-
+import kr.lunaf.lunastock.events.PlayerBuyStockEvent;
+import kr.lunaf.lunastock.events.PlayerSellStockEvent;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
-import java.util.UUID;
 
 public class StockCommand implements CommandExecutor {
     private LunaStock plugin;
-    private StockUtils stockUtils;
-    private DatabaseUtils databaseUtils;
-    private EconomyUtils economyUtils;
+    private LunaStockAPI lunaStockAPI;
 
     public StockCommand(LunaStock plugin) {
         this.plugin = plugin;
-        this.stockUtils = plugin.getStockUtils();
-        this.databaseUtils = plugin.getDatabaseUtils();
-        this.economyUtils = plugin.getEconomyUtils();
+        this.lunaStockAPI = plugin.getLunaStockAPI();
     }
 
     @Override
@@ -40,7 +31,7 @@ public class StockCommand implements CommandExecutor {
         Player player = (Player) sender;
 
         if (args.length < 1) {
-            player.sendMessage("Usage: /주식 <buy|sell|list|info|history> <stock_name> [amount]");
+            player.sendMessage("Usage: /주식 <buy|sell|list|info|history|returns> <stock_name> [amount]");
             return true;
         }
 
@@ -78,56 +69,65 @@ public class StockCommand implements CommandExecutor {
                 }
                 stockHistory(player, args[1]);
                 break;
+            case "returns":
+                if (args.length < 2) {
+                    player.sendMessage("Usage: /주식 returns <stock_name>");
+                    return true;
+                }
+                stockReturns(player, args[1]);
+                break;
             default:
-                player.sendMessage("Usage: /주식 <buy|sell|list|info|history> <stock_name> [amount]");
+                player.sendMessage("Usage: /주식 <buy|sell|list|info|history|returns> <stock_name> [amount]");
         }
 
         return true;
     }
 
     private void buyStock(Player player, String stockName, int amount) {
-        Stock stock = stockUtils.getStockByName(stockName);
+        Stock stock = lunaStockAPI.getStock(stockName);
         if (stock == null) {
             player.sendMessage("존재하지 않는 주식입니다.");
             return;
         }
 
         double cost = stock.getCurrentValue() * amount;
-        if (economyUtils.withdraw(player, cost)) {
-            databaseUtils.addPlayerStock(player.getUniqueId(), stock.getUuid(), amount);
+        if (plugin.getEconomyUtils().withdraw(player, cost)) {
+            plugin.getDatabaseUtils().addPlayerStock(player.getUniqueId(), stock.getUuid(), amount, stock.getCurrentValue());
             player.sendMessage(stockName + " 주식을 " + amount + "주 구매하였습니다.");
+            plugin.getServer().getPluginManager().callEvent(new PlayerBuyStockEvent(player, stock, amount, cost));
         } else {
             player.sendMessage("돈이 부족합니다.");
         }
     }
 
     private void sellStock(Player player, String stockName, int amount) {
-        Stock stock = stockUtils.getStockByName(stockName);
+        Stock stock = lunaStockAPI.getStock(stockName);
         if (stock == null) {
             player.sendMessage("존재하지 않는 주식입니다.");
             return;
         }
 
-        int playerStockAmount = databaseUtils.getPlayerStock(player.getUniqueId(), stock.getUuid());
+        int playerStockAmount = plugin.getDatabaseUtils().getPlayerStock(player.getUniqueId(), stock.getUuid());
         if (playerStockAmount < amount) {
             player.sendMessage("판매할 주식이 부족합니다.");
             return;
         }
 
         double earnings = stock.getCurrentValue() * amount;
-        economyUtils.deposit(player, earnings);
-        databaseUtils.removePlayerStock(player.getUniqueId(), stock.getUuid(), amount);
+        plugin.getEconomyUtils().deposit(player, earnings);
+        plugin.getDatabaseUtils().removePlayerStock(player.getUniqueId(), stock.getUuid(), amount);
         player.sendMessage(stockName + " 주식을 " + amount + "주 판매하였습니다.");
+        plugin.getServer().getPluginManager().callEvent(new PlayerSellStockEvent(player, stock, amount, earnings));
     }
 
     private void listStocks(Player player) {
-        for (Stock stock : stockUtils.getStocks()) {
+        for (Stock stock : lunaStockAPI.getStockList()) {
             player.sendMessage(stock.getName() + ": " + stock.getCurrentValue() + "원 (최근 변동: " + stock.getLastChange() + ")");
         }
     }
 
     private void stockInfo(Player player, String stockName) {
-        Stock stock = stockUtils.getStockByName(stockName);
+        Stock stock = lunaStockAPI.getStock(stockName);
         if (stock == null) {
             player.sendMessage("존재하지 않는 주식입니다.");
             return;
@@ -141,16 +141,27 @@ public class StockCommand implements CommandExecutor {
     }
 
     private void stockHistory(Player player, String stockName) {
-        Stock stock = stockUtils.getStockByName(stockName);
+        Stock stock = lunaStockAPI.getStock(stockName);
         if (stock == null) {
             player.sendMessage("존재하지 않는 주식입니다.");
             return;
         }
 
-        List<String> changes = databaseUtils.getRecentStockChanges(stock.getUuid(), 5);
+        List<String> changes = lunaStockAPI.getStockHistory(stock, 5);
         player.sendMessage(stock.getName() + " 최근 변동 내역:");
         for (String change : changes) {
             player.sendMessage(change);
         }
+    }
+
+    private void stockReturns(Player player, String stockName) {
+        Stock stock = lunaStockAPI.getStock(stockName);
+        if (stock == null) {
+            player.sendMessage("존재하지 않는 주식입니다.");
+            return;
+        }
+
+        double returns = lunaStockAPI.calculateReturns(player, stock);
+        player.sendMessage(stock.getName() + " 주식 수익률: " + returns + "%");
     }
 }

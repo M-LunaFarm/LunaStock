@@ -4,9 +4,7 @@ import kr.lunaf.lunastock.LunaStock;
 import kr.lunaf.lunastock.classes.Stock;
 import kr.lunaf.lunastock.utils.DatabaseUtils;
 import kr.lunaf.lunastock.utils.StockUtils;
-
 import org.bukkit.scheduler.BukkitRunnable;
-
 import java.util.Random;
 
 public class StockUpdateTask extends BukkitRunnable {
