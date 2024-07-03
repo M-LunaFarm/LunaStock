@@ -1,0 +1,4 @@
+name: LunaStock
+version: '${project.version}'
+main: kr.lunaf.lunastock.LunaStock
+api-version: 1.21

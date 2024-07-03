@@ -1,0 +1,18 @@
+stocks:
+  동동전자:
+    first_amount: 100000
+    max_amount: 10000000
+    current_value: 100.0
+    good_news:
+      - 회사의 매출 최대!
+    bad_news:
+      - 동동전자 수출길 막혀...
+      - 신제품에서 불량 발생
+  젠젠오락:
+    first_amount: 500000
+    max_amount: 5000000
+    current_value: 250.0
+    good_news:
+      - 신제품 출시!
+    bad_news:
+      - 회사 대표 젠이의 횡령 의혹
